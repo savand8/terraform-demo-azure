@@ -1,0 +1,28 @@
+# Local provider/plugin cache
+.terraform/
+
+# State files - contain secrets (including the generated admin password!)
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Saved plan files
+*.tfplan
+tfplan
+
+# Local override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+.terraformrc
+terraform.rc
+
+# NOTE: .terraform.lock.hcl SHOULD be committed (pins provider versions).
+# NOTE: terraform.tfvars is committed here because it holds no secrets.
+#       In real projects, keep secret-bearing .tfvars files out of git.
