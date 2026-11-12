@@ -68,6 +68,58 @@ terraform plan -var="vm_size=Standard_B2ms"
 terraform destroy
 ```
 
+## Part 2: modules (this branch)
+
+On this branch, everything a single VM needs is packaged as a reusable module in `modules/windows-vm`. The root config keeps the shared resource group and network, then calls the module.
+
+```
+modules/windows-vm/
+├── versions.tf    # required providers (no provider block - that stays in the root)
+├── variables.tf   # the module's inputs
+├── main.tf        # public IP, NSG, NIC, password, VM
+└── outputs.tf     # what the caller can see, as module.vm.<output>
+```
+
+```powershell
+# 1. Switch branch and re-initialise (Terraform needs to install the module)
+git checkout 02-modules
+terraform init
+
+# 2. Note the new resource addresses, e.g. module.vm.azurerm_windows_virtual_machine.this
+terraform plan
+```
+
+### Showing reuse: two VMs from one module
+
+Change the module block in `main.tf` to use `for_each`:
+
+```hcl
+module "vm" {
+  source   = "./modules/windows-vm"
+  for_each = toset(["web", "app"])
+
+  name                = "${local.name}-${each.key}"
+  computer_name       = "${var.prefix}-${each.key}"
+  location            = azurerm_resource_group.demo.location
+  resource_group_name = azurerm_resource_group.demo.name
+  subnet_id           = azurerm_subnet.demo.id
+  vm_size             = var.vm_size
+  admin_username      = var.admin_username
+  allowed_rdp_cidr    = var.allowed_rdp_cidr
+  tags                = local.common_tags
+}
+```
+
+The root outputs then need to loop over the instances too, for example:
+
+```hcl
+output "public_ip_address" {
+  value = { for k, vm in module.vm : k => vm.public_ip_address }
+}
+```
+
+Run `terraform plan` to see two complete VMs.
+
 ## Notes
 
 - The generated admin password is stored in the Terraform state. That's fine for a demo, but use a secrets store like Azure Key Vault in production.
